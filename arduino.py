@@ -10,7 +10,6 @@ import sys
 from openai import OpenAI
 import threading
 from PIL import ImageGrab
-from pathlib import Path
 import io
 import base64
 
@@ -30,7 +29,7 @@ CB_TIME = 3
 temp_value = None
 marine_life_density = None
 shake_detected = False
-marine_life_density_output = None
+marine_life_density_output = "Low"
 button_pressed = False  # Variable to store button state
 
 board = None
@@ -47,20 +46,14 @@ def ultrasonic(data):
             marine_life_density = 1
         else:
             marine_life_density += 1
-            
+
 def temp(data):
     global temp_value
     reading = data[CB_VALUE]
     voltage = reading * (5.0 / 1024.0)
-    temp_value = round(voltage * 100, 2)
+    temp_value = round(voltage * 100, 1)
     print(f"Temperature: {temp_value}°C")
     
-
-def shake_alert():
-    # show pop up for 10 seconds
-    global shake_detected
-    shake_detected = True
-    print("Shake alert!")
 
 def vibration_callback(data):   
     value = data[CB_VALUE]
@@ -69,7 +62,6 @@ def vibration_callback(data):
         global shake_detected
         shake_detected = True
         print("Shake detected!")
-        shake_alert()
 
 def temp_in(my_board, pin):
     """
@@ -176,9 +168,7 @@ def sonar(my_board, trigger_pin, echo_pin, callback):
 def button_callback(data):
     global button_pressed, shake_detected
     button_pressed = data[CB_VALUE] == 1  # Update button state
-    if button_pressed:
-        shake_alert()
-    elif not button_pressed:
+    if not button_pressed:
         print("Button released")
         shake_detected = False
 

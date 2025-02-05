@@ -4,8 +4,6 @@ import tkinter as tk
 import ctypes as ct
 from time import strftime
 from arduino import get_temp, get_marine_life_density, runOpenAI, get_shake_detected, runArduino, getSummary
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import pandas as pd
 from tkinter import font, PhotoImage
 import threading
@@ -17,23 +15,23 @@ def shake_alert():
     # show pop up for 10 seconds
     if not get_shake_detected():
         return
-    
-    print("Shake alert!")
-    warning_image = PhotoImage(
-        file=load_asset("warning.png")
-    )   
-    warning = tk.Label(
-        frame,
-        image=warning_image
-    )
-    warning.place(
-        x=512.0,
-        y=321.0,
-        anchor="center"
-    )
+    else:
+        print("Shake alert!")
+        warning_image = PhotoImage(
+            file=load_asset("warning.png")
+        )   
+        warning = tk.Label(
+            frame,
+            image=warning_image
+        )
+        warning.place(
+            x=512.0,
+            y=321.0,
+            anchor="center"
+        )
 
-    # remove the loading image after 10 seconds
-    frame.after(10000, lambda: warning.place_forget())
+        # remove the loading image after 10 seconds
+        frame.after(10000, lambda: warning.place_forget())
 
 # Placeholder functions from PlaceHolder.py
 def show_weather(window):
@@ -214,10 +212,10 @@ def show_weather(window):
         anchor="nw",
         text="24°C",
         fill="#ffffff",
-        font=("Poppins", 80 * -1, 'bold')
+        font=("Poppins", 60 * -1, 'bold')
     )
 
-    canvas.create_text(
+    canvas.create_text( 
         183,
         445,
         anchor="nw",
@@ -343,7 +341,7 @@ def show_weather(window):
             print("Error updating GUI:")
 
         # Schedule the function to run again after 1000 ms (1 second)
-        window.after(1000, update_gui)
+        window.after(2000, update_gui)
 
     update_time()  # Initial call to start updating time
     update_gui()  # Initial call to start updating GUI
@@ -502,7 +500,6 @@ def show_history(window):
     window.resizable(False, False)
     dark_title_bar(window)
     window.mainloop()
-
 
 def show_forecasts(window):
     canvas = tk.Canvas(
@@ -1182,6 +1179,11 @@ window.geometry("1024x643")
 window.configure(bg="#000e3c")
 window.title("BlueHaven")
 
-runArduino()  # Start the Arduino communication thread
 runOpenAI()  # Start the OpenAI communication thread
-show_weather(window)
+
+# Start the Arduino communication thread in the background
+arduino_thread = threading.Thread(target=runArduino)
+arduino_thread.start()
+
+app_thread = threading.Thread(target=show_weather(window))
+app_thread.start()
