@@ -1,12 +1,31 @@
 import os
 import sys
+import re
 import tkinter as tk
-import ctypes as ct
+from tkinter import ttk
 from time import strftime
 from arduino import get_temp, get_marine_life_density, runOpenAI, get_shake_detected, runArduino, getSummary
 import pandas as pd
 from tkinter import font, PhotoImage
 import threading
+from PIL import ImageGrab
+import io
+import base64
+from ctypes import windll, byref, sizeof, c_int
+
+def hex_to_colorref(hex_color: str):
+    colorref = int(hex_color[1:], 16)  # remove the "#" character and convert to integer
+    colorref = ((colorref & 0xFF) << 16) | (colorref & 0xFF00) | ((colorref >> 16) & 0xFF)
+    return int(hex(colorref), 16)  # prints the converted colorref value in hex format
+
+
+def change_caption_color(window, hex_code: str):
+    HWND = windll.user32.GetParent(window.winfo_id())
+    DWMWA_CAPTION_COLOR = 35
+
+    caption_color = hex_to_colorref(hex_code)
+
+    windll.dwmapi.DwmSetWindowAttribute(HWND, DWMWA_CAPTION_COLOR, byref(c_int(caption_color)), sizeof(c_int))
 
 frame = None
 
@@ -346,7 +365,8 @@ def show_weather(window):
     update_time()  # Initial call to start updating time
     update_gui()  # Initial call to start updating GUI
     window.resizable(False, False)
-    dark_title_bar(window)
+    window.update()
+    change_caption_color(window, "#000F3C")
     window.mainloop()
 
 def show_history(window):
@@ -498,7 +518,8 @@ def show_history(window):
     global frame
     frame = window
     window.resizable(False, False)
-    dark_title_bar(window)
+    window.update()
+    change_caption_color(window, "#000F3C")
     window.mainloop()
 
 def show_forecasts(window):
@@ -1047,136 +1068,189 @@ def show_forecasts(window):
     frame = window
     
     window.resizable(False, False)
-    dark_title_bar(window)
+    window.update()
+    change_caption_color(window, "#000F3C")
     window.mainloop()
 
 def ai_summary(window, type):
+    """ Takes a screenshot and provides an AI summary with improved UI and correctly formatted bold text """
 
+    # Take a screenshot of the current Tkinter window
+    x, y = window.winfo_rootx(), window.winfo_rooty()
+    width, height = x + window.winfo_width() + 300, y + window.winfo_height() + 300
+    screenshot = ImageGrab.grab(bbox=(x, y, width, height))
+
+    # Convert screenshot to base64 string
+    buffer = io.BytesIO()
+    screenshot.save(buffer, format="PNG")
+    buffer.seek(0)
+    img_str = base64.b64encode(buffer.getvalue()).decode('utf-8')
+
+    # Create a modern AI summary window
     toplevel = tk.Toplevel(window)
-    toplevel.configure(bg="#000e3c")  # Set the background color of the toplevel window
-
+    toplevel.configure(bg="#121212")  # Dark theme
+    toplevel.geometry("700x500")  
+    toplevel.title("AI Summary")
+    
+    # Disable the main window while loading
     window.attributes("-disabled", True)
 
+    toplevel.update()
+    change_caption_color(toplevel, "#121212")
+
     def on_close():
+        """ Re-enable the main window when the summary window is closed """
         window.attributes("-disabled", False)
         toplevel.destroy()
 
     toplevel.protocol("WM_DELETE_WINDOW", on_close)
-    
-    # Create a Text widget with a scrollbar
-    text_frame = tk.Frame(toplevel, bg="#000e3c")
-    text_frame.pack(padx=20, pady=20, fill="both", expand=True)
-    
-    scrollbar = tk.Scrollbar(text_frame)
-    scrollbar.pack(side="right", fill="y")
-    
-    text_widget = tk.Text(text_frame, wrap="word", bg="#000e3c", fg="#ffffff", font=("Poppins", 14), relief="flat", yscrollcommand=scrollbar.set)
-    text_widget.pack(side="left", fill="both", expand=True)
-    scrollbar.config(command=text_widget.yview)
-    
-    # Define bold and heading fonts
-    bold_font = font.Font(text_widget, text_widget.cget("font"))
-    bold_font.configure(weight="bold")
-    
-    heading_font = font.Font(text_widget, text_widget.cget("font"))
-    heading_font.configure(size=18, weight="bold", underline=True)
-    
 
-    def insert_summary_text(summary_text):
-        # Insert the text with bold and heading formatting
-        start = 0
-        while start < len(summary_text):
-            if summary_text.startswith("###", start):
-                end = summary_text.find("\n", start)
-                if end == -1:
-                    end = len(summary_text)
-                text_widget.insert("end", summary_text[start+3:end].strip() + "\n", "heading")
-                start = end + 1
+    # Create a frame for the UI
+    frame = tk.Frame(toplevel, bg="#121212")
+    frame.pack(expand=True, fill="both", padx=20, pady=20)
+
+    # Add loading image at the center
+    loading_image = PhotoImage(file=load_asset("loading.png"))  
+    loading_label = tk.Label(frame, image=loading_image, bg="#121212")
+    loading_label.image = loading_image  # Prevent garbage collection
+    loading_label.pack(expand=True)
+
+    # Create a styled Text widget with a custom scrollbar
+    text_frame = tk.Frame(frame, bg="#121212")
+
+    text_widget = tk.Text(
+        text_frame, wrap="word", bg="#1E1E1E", fg="#ffffff",
+        font=("Poppins", 16), relief="flat", padx=10, pady=10,
+        insertbackground="white",  # White cursor for better visibility
+        spacing1=5, spacing2=5, spacing3=5  # Improved spacing between lines
+    )
+
+    # Custom scrollbar styling
+    scrollbar_style = ttk.Style()
+    scrollbar_style.theme_use("clam")
+    scrollbar_style.configure("Custom.Vertical.TScrollbar",
+                              gripcount=0,
+                              background="#3E3E3E", 
+                              darkcolor="#3E3E3E", 
+                              lightcolor="#3E3E3E",
+                              troughcolor="#1E1E1E",
+                              bordercolor="#1E1E1E",
+                              arrowcolor="white")
+    scrollbar_style.map("Custom.Vertical.TScrollbar",
+                        background=[("active", "#505050"), ("!active", "#3E3E3E")])  # Fixes inactive white color
+
+    custom_scrollbar = ttk.Scrollbar(
+        text_frame, orient="vertical", style="Custom.Vertical.TScrollbar", command=text_widget.yview
+    )
+    text_widget.config(yscrollcommand=custom_scrollbar.set)
+
+    # Packing the text widget and scrollbar (initially hidden)
+    custom_scrollbar.pack(side="right", fill="y")
+    text_widget.pack(side="left", fill="both", expand=True)
+
+    # Define text styles
+    text_widget.tag_configure("bold", font=("Poppins", 16, "bold"), foreground="#FFD700")  # Gold-colored bold
+    text_widget.tag_configure("heading", font=("Poppins", 20, "bold", "underline"), foreground="#FFA500")  # Orange headings
+    text_widget.tag_configure("list", lmargin1=20, lmargin2=40)  # Indent bullet points
+    text_widget.tag_configure("numbered_list", lmargin1=20, lmargin2=40)  # Indent numbered lists
+
+    def format_summary_text(summary_text):
+        """ 
+        Formats text by applying bold styling and properly structuring headings and lists.
+        Handles Markdown-style formatting like **bold**, ### headings, and lists.
+        """
+        text_widget.configure(state="normal")  # Make it editable for insertion
+        text_widget.delete("1.0", "end")  # Clear any previous content
+
+        lines = summary_text.split("\n")
+        for line in lines:
+            if line.startswith("###"):  # Headings
+                text_widget.insert("end", line.replace("###", "").strip() + "\n", "heading")
+            elif line.startswith("- "):  # Bulleted lists
+                text_widget.insert("end", line + "\n", "list")
+            elif line[:2].isdigit() and line[2] == ".":  # Numbered lists
+                text_widget.insert("end", line + "\n", "numbered_list")
             else:
-                end = summary_text.find("**", start)
-                if end == -1:
-                    text_widget.insert("end", summary_text[start:])
-                    break
-                text_widget.insert("end", summary_text[start:end])
-                start = end + 2
-                end = summary_text.find("**", start)
-                if end == -1:
-                    text_widget.insert("end", summary_text[start:], "bold")
-                    break
-                text_widget.insert("end", summary_text[start:end], "bold")
-                start = end + 2
-        
-        # Apply the bold and heading tags
-        text_widget.tag_configure("bold", font=bold_font)
-        text_widget.tag_configure("heading", font=heading_font)
-        
-        # Disable the Text widget to make it read-only
-        text_widget.configure(state="disabled")
-        
-        loading.place_forget()
+                # Process bold text by removing ** but keeping formatting
+                while "**" in line:
+                    parts = re.split(r"\*\*(.*?)\*\*", line, maxsplit=1)
+                    if len(parts) == 3:  # Ensure the split worked correctly
+                        before, bold_text, after = parts
+                        text_widget.insert("end", before)  # Insert normal text
+                        text_widget.insert("end", bold_text, "bold")  # Insert bold text
+                        line = after  # Continue processing the rest of the line
+                    else:
+                        break  # Exit if no more ** are found
+                text_widget.insert("end", line + "\n")  # Insert remaining text
+
+        text_widget.configure(state="disabled")  # Make text read-only
+        text_widget.yview_moveto(1)  # Auto-scroll to bottom
 
     def fetch_summary():
-        summary_text = getSummary(window, type)
-        insert_summary_text(summary_text)
+        """ Fetch AI-generated summary in a separate thread """
+        summary_text = getSummary(img_str, type)
+        toplevel.after(100, lambda: display_summary(summary_text))  # Update UI safely
 
-    loading_image = PhotoImage(
-        file=load_asset("loading.png")
-    )   
-    loading = tk.Label(
-        text_frame,
-        image=loading_image
-    )
-    loading.place(
-        x=512.0,
-        y=321.0,
-        anchor="center"
-    )
-    # Run the fetch_summary function in a separate thread
-    threading.Thread(target=fetch_summary).start()
+    def display_summary(summary_text):
+        """ Inserts formatted summary into the text widget and removes the loading image """
+        loading_label.pack_forget()  # Hide loading animation
+        text_frame.pack(expand=True, fill="both")  # Show text area
+        format_summary_text(summary_text)  # Apply formatting
     
+    def show_context_menu(event):
+        """ Displays a dark-themed right-click menu with 'Select All' and 'Copy' options. """
+        context_menu.tk_popup(event.x_root, event.y_root)
+
+    def select_all():
+        """ Selects all text in the widget. """
+        text_widget.tag_add("sel", "1.0", "end")
+        text_widget.mark_set("insert", "1.0")
+        text_widget.see("insert")
+
+    def copy_text():
+        """ Copies selected text, or everything if nothing is selected. """
+        try:
+            selected_text = text_widget.get("sel.first", "sel.last")
+        except tk.TclError:  # If no text is selected, copy everything
+            selected_text = text_widget.get("1.0", "end-1c")
+        
+        window.clipboard_clear()
+        window.clipboard_append(selected_text)
+        window.update()
+
+    # Create the right-click menu
+    context_menu = tk.Menu(text_widget, tearoff=0, bg="#2E2E2E", fg="white", activebackground="#505050", activeforeground="white", borderwidth=0)
+    context_menu.add_command(label="Select All", command=select_all)
+    context_menu.add_command(label="Copy", command=copy_text)
+
+    # Bind right-click event to show the menu
+    text_widget.bind("<Button-3>", show_context_menu)
+
+
+    # Run AI summary generation in a separate thread
+    threading.Thread(target=fetch_summary, daemon=True).start()
+
+    # Center the AI summary window
     toplevel.update_idletasks()
-
-    main_x = window.winfo_x()
-    main_y = window.winfo_y()
-    main_w = window.winfo_width()
-    main_h = window.winfo_height()
-
-    top_w = toplevel.winfo_width()
-    top_h = toplevel.winfo_height()
-
-    pos_x = main_x + (main_w // 2) - (top_w // 2)
-    pos_y = main_y + (main_h // 2) - (top_h // 2)
-
+    main_x, main_y = window.winfo_x(), window.winfo_y()
+    main_w, main_h = window.winfo_width(), window.winfo_height()
+    top_w, top_h = toplevel.winfo_width(), toplevel.winfo_height()
+    pos_x, pos_y = main_x + (main_w // 2) - (top_w // 2), main_y + (main_h // 2) - (top_h // 2)
     toplevel.geometry(f"+{pos_x}+{pos_y}")
+
     toplevel.focus_set()
     toplevel.grab_set()
-    dark_title_bar(toplevel)
     window.wait_window(toplevel)
+
 
 def load_asset(path):
     base = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
     assets = os.path.join(base, "assets")
     return os.path.join(assets, path)
 
-def dark_title_bar(window):
-    """
-    MORE INFO:
-    https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute
-    """
-    window.update()
-    DWMWA_USE_IMMERSIVE_DARK_MODE = 20
-    set_window_attribute = ct.windll.dwmapi.DwmSetWindowAttribute
-    get_parent = ct.windll.user32.GetParent
-    hwnd = get_parent(window.winfo_id())
-    rendering_policy = DWMWA_USE_IMMERSIVE_DARK_MODE
-    value = 2
-    value = ct.c_int(value)
-    set_window_attribute(hwnd, rendering_policy, ct.byref(value),
-                         ct.sizeof(value))
-
 window = tk.Tk()
 window.geometry("1024x643")
-window.configure(bg="#000e3c")
+window.configure(bg="#000f3c")
 window.title("BlueHaven")
 
 runOpenAI()  # Start the OpenAI communication thread
