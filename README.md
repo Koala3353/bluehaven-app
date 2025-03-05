@@ -79,6 +79,15 @@ BlueHaven/ ├── pycache/ ├── arduino.py ├── assets/ │ ├─�
 - Verify that the OpenAI API key is correctly set up.
 - Check for any missing image assets in the [assets](http://_vscodecontentref_/10) directory.
 
+## Pictures
+![image](https://github.com/user-attachments/assets/ec6209db-6f3e-4f59-879c-5d3a3b2474fb)
+![image](https://github.com/user-attachments/assets/a2f77078-c29d-458d-91b4-6e307de87379)
+![image](https://github.com/user-attachments/assets/dbf8d4a6-89d4-4267-aa6f-9258026f08e4)
+![image](https://github.com/user-attachments/assets/5bb91426-40d3-4f61-b901-f3f38a6c5a8c)
+![image](https://github.com/user-attachments/assets/df2908ef-52f2-4013-8e50-5321d0644402)
+![image](https://github.com/user-attachments/assets/f28d93e0-b149-4d5d-a4d2-258b0ed224e5)
+![image](https://github.com/user-attachments/assets/5820c364-f813-4c86-a951-14efb5e3b317)
+
 ## License
 
 This project is licensed under the MIT License. See the LICENSE file for details.
