@@ -93,7 +93,7 @@ def runArduino():
 def runOpenAI():
     """ Initialize OpenAI API """
     global client
-    client = OpenAI(api_key="")
+    client = OpenAI(api_key="API-KEY")
 
 
 def getSummary(img_str, type):

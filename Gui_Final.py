@@ -120,7 +120,7 @@ def show_weather(window):
         673,
         449,
         anchor="nw",
-        text="5mg/L",
+        text="7mg/L",
         fill="#ffffff",
         font=("Poppins", 20 * -1)
     )
@@ -150,7 +150,7 @@ def show_weather(window):
         620,
         553,
         anchor="nw",
-        text="8.1",
+        text="6.5",
         fill="#ffffff",
         font=("Poppins", 20 * -1)
     )
@@ -168,7 +168,7 @@ def show_weather(window):
         450,
         553,
         anchor="nw",
-        text="11,013hPa",
+        text="5,647 psi",
         fill="#ffffff",
         font=("Poppins", 20 * -1)
     )
